@@ -1,0 +1,71 @@
+func responseToBytes(res *http.Response) []byte {
+	var buf bytes.Buffer
+
+	// Write status line
+	statusLine := fmt.Sprintf("HTTP/%d.%d %s\r\n", res.ProtoMajor, res.ProtoMinor, res.Status)
+	buf.WriteString(statusLine)
+
+	// Write headers
+	err := res.Header.Write(&buf)
+	if err != nil {
+		return nil
+	}
+	buf.WriteString("\r\n")
+
+	// Write body
+	bodyBytes, _ := io.ReadAll(res.Body)
+	buf.Write(bodyBytes)
+
+	return buf.Bytes()
+}
+
+func responseToString(res *http.Response) string {
+	var buf bytes.Buffer
+
+	// Write status line
+	statusLine := fmt.Sprintf("HTTP/%d.%d %s\r\n", res.ProtoMajor, res.ProtoMinor, res.Status)
+	buf.WriteString(statusLine)
+
+	// Write headers
+	err := res.Header.Write(&buf)
+	if err != nil {
+		return ""
+	}
+	buf.WriteString("\r\n")
+
+	// Write body
+	bodyBytes, _ := io.ReadAll(res.Body)
+	buf.Write(bodyBytes)
+	buf.WriteString("\r\n")
+
+	return buf.String()
+}
+
+func ParseHTTP(httpBytes []byte) (string, error) {
+	reader := bytes.NewReader(httpBytes)
+	bufReader := bufio.NewReader(reader)
+
+	_, err := bufReader.ReadString('\n')
+	if err != nil {
+		return "", errors.New("failed to read request line")
+	}
+
+	for {
+		line, err := bufReader.ReadString('\n')
+		if err != nil {
+			return "", fmt.Errorf("failed to read headers")
+		}
+		line = strings.TrimSpace(line)
+		if line == "" {
+			break
+		}
+		parts := strings.SplitN(line, ": ", 2)
+		if len(parts) == 2 {
+			if parts[0] == "Host" {
+				return parts[1], nil
+			}
+		}
+	}
+
+	return "", errors.New("host header not found")
+}
