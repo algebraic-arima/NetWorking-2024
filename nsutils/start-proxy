@@ -1,6 +1,7 @@
 #!/bin/bash
 
-nc -l $PORT &
+# nc -l $PORT &
+go run ../socks5-server/socks5_server.go -port=$PORT &
 # change the line above to start your own server
 # node ~/Code/proxy/socks5 &
 # ../bin/proxy &

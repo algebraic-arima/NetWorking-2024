@@ -2,14 +2,13 @@ package main
 
 import (
 	"encoding/binary"
+	"flag"
 	"fmt"
 	"io"
 	"net"
 )
 
-const (
-	proxyListenPort = 1080
-)
+var proxyListenPort = 8080
 
 func handleClient(conn net.Conn) {
 	buf := make([]byte, 262)
@@ -132,6 +131,10 @@ func handleClient(conn net.Conn) {
 }
 
 func main() {
+	Port := flag.Int("port", 1080, "Port to listen on")
+	flag.Parse()
+	proxyListenPort = *Port
+
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", proxyListenPort))
 	if err != nil {
 		fmt.Println("Failed to start server:", err)
