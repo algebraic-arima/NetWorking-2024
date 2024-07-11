@@ -124,7 +124,6 @@ func handleClient(conn net.Conn) {
 		if _, err := io.Copy(src, dest); err != nil {
 			return
 		}
-		//fmt.Println("\x1b[32mData forwarded\x1b[0m")
 	}
 	go forward(targetConn, conn)
 	forward(conn, targetConn)

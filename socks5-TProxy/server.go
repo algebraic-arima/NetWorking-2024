@@ -2,14 +2,13 @@ package main
 
 import (
 	"encoding/binary"
+	"flag"
 	"fmt"
 	"io"
 	"net"
 )
 
-const (
-	proxyListenPort = 1080
-)
+var proxyListenPort = 1080
 
 func handleClient(conn net.Conn) {
 	buf := make([]byte, 262)
@@ -111,7 +110,6 @@ func handleClient(conn net.Conn) {
 	//io.Copy(targetConn, conn)
 	//io.Copy(conn, targetConn)
 	forward := func(src, dest net.Conn) {
-		//fmt.Println("Forwarding data")
 		defer func(src net.Conn) {
 			if err := src.Close(); err != nil {
 				fmt.Println("Failed to close source:", err)
@@ -125,20 +123,16 @@ func handleClient(conn net.Conn) {
 		if _, err := io.Copy(src, dest); err != nil {
 			return
 		}
-		//fmt.Println("\x1b[32mData forwarded\x1b[0m")
 	}
 	go forward(targetConn, conn)
-	go forward(conn, targetConn)
-	//test := make([]byte, 1024)
-	//n, err := targetConn.Read(test)
-	//if err != nil {
-	//	fmt.Println("Failed to read from target:", err)
-	//	return
-	//}
-	//fmt.Println("Read from target:", string(test[:n]))
+	forward(conn, targetConn)
 }
 
-func main() {
+func server() {
+	Port := flag.Int("port", 1080, "Port to listen on")
+	flag.Parse()
+	proxyListenPort = *Port
+
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", proxyListenPort))
 	if err != nil {
 		fmt.Println("Failed to start server:", err)

@@ -124,6 +124,8 @@ func handleConnection(conn net.Conn) {
 	buffer = make([]byte, 4096)
 	for {
 		udpConn.SetReadDeadline(time.Now().Add(30 * time.Second))
+
+		// Read UDP packet from the random port
 		n, addr, err := udpConn.ReadFromUDP(buffer)
 		if err != nil {
 			fmt.Println("Error reading from UDP:", err)
@@ -142,7 +144,7 @@ func handleConnection(conn net.Conn) {
 			continue
 		}
 
-		// Send UDP packet to destination
+		// Send UDP packet to destination port
 		targetAddr, err := net.ResolveUDPAddr("udp", dstAddr.String())
 		if err != nil {
 			fmt.Println("Error resolving target address:", err)
@@ -156,7 +158,7 @@ func handleConnection(conn net.Conn) {
 
 		fmt.Println("Sent to server:", string(buffer))
 
-		// Receive response from destination
+		// Receive response from destination port
 		n, addr, err = udpConn.ReadFromUDP(buffer)
 		if err != nil {
 			fmt.Println("Error reading from target server:", err)
