@@ -107,25 +107,17 @@ func handleClient(conn net.Conn) {
 
 	fmt.Println("Connected to target:", host)
 
-	//io.Copy(targetConn, conn)
-	//io.Copy(conn, targetConn)
 	forward := func(src, dest net.Conn) {
-		defer func(src net.Conn) {
-			if err := src.Close(); err != nil {
-				fmt.Println("Failed to close source:", err)
-			}
-		}(src)
-		defer func(dest net.Conn) {
-			if err := dest.Close(); err != nil {
-				fmt.Println("Failed to close destination:", err)
-			}
-		}(dest)
 		if _, err := io.Copy(src, dest); err != nil {
 			return
 		}
 	}
+
 	go forward(targetConn, conn)
 	forward(conn, targetConn)
+
+	defer conn.Close()
+	defer targetConn.Close()
 }
 
 func server() {

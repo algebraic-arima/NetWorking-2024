@@ -15,10 +15,13 @@ const (
 
 // 0 for direct, 1 for proxy, -1 for forbidden
 func diffIP(dest []byte) int {
-	allowedCIDR := []string{
+	directCIDR := []string{
 		"192.168.1.0/24", "10.0.0.0/8",
 	}
-	for _, cidr := range allowedCIDR {
+	forbiddenCIDR := []string{
+		"39.156.66.10/1",
+	}
+	for _, cidr := range directCIDR {
 		_, ipNet, err := net.ParseCIDR(cidr)
 		if err != nil {
 			fmt.Println("Failed to parse CIDR:", err)
@@ -28,17 +31,27 @@ func diffIP(dest []byte) int {
 			return 0
 		}
 	}
+	for _, cidr := range forbiddenCIDR {
+		_, ipNet, err := net.ParseCIDR(cidr)
+		if err != nil {
+			fmt.Println("Failed to parse CIDR:", err)
+			return -1
+		}
+		if ipNet.Contains(dest) {
+			return -1
+		}
+	}
 	return 1
 }
 
 func diffDomain(dest []byte) int {
-	directPattern := []string{
+	directDomainPattern := []string{
 		`^.*\.sjtu\.edu\.cn$`,
 	}
-	forbiddenPattern := []string{
-		//`^.*\.baidu\.com$`,
+	forbiddenDomainPattern := []string{
+		`^.*\.baidu\.com$`,
 	}
-	for _, p := range directPattern {
+	for _, p := range directDomainPattern {
 		match, err := regexp.MatchString(p, string(dest))
 		if match {
 			return 0
@@ -48,7 +61,7 @@ func diffDomain(dest []byte) int {
 			return -1
 		}
 	}
-	for _, p := range forbiddenPattern {
+	for _, p := range forbiddenDomainPattern {
 		match, err := regexp.MatchString(p, string(dest))
 		if match {
 			return -1
@@ -156,16 +169,6 @@ func handleClient(conn net.Conn) {
 	}
 
 	forward := func(src, dest net.Conn) {
-		defer func(src net.Conn) {
-			if err := src.Close(); err != nil {
-				fmt.Println("Failed to close source connection:", err)
-			}
-		}(src)
-		defer func(dest net.Conn) {
-			if err := dest.Close(); err != nil {
-				fmt.Println("Failed to close destination connection:", err)
-			}
-		}(dest)
 
 		if _, err := io.Copy(dest, src); err != nil {
 			return
@@ -174,6 +177,17 @@ func handleClient(conn net.Conn) {
 
 	go forward(conn, proxy2Conn)
 	forward(proxy2Conn, conn)
+
+	defer func(src net.Conn) {
+		if err := src.Close(); err != nil {
+			fmt.Println("Failed to close source connection:", err)
+		}
+	}(conn)
+	defer func(dest net.Conn) {
+		if err := dest.Close(); err != nil {
+			fmt.Println("Failed to close destination connection:", err)
+		}
+	}(proxy2Conn)
 }
 
 func connect(targetAddr string) (net.Conn, error) {
