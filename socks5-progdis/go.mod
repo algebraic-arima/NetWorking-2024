@@ -1,3 +1,3 @@
-module socks5-codedis
+module code
 
 go 1.22

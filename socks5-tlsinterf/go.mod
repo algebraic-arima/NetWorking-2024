@@ -1,4 +1,4 @@
-module socks5-tlsinterf
+module code
 
 go 1.22
 

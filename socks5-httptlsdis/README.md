@@ -1,4 +1,7 @@
-# A demo for proxy1 with socks5 name-based distribution
+Get domain name from HTTP request or
+HTTPS SNI field, and route the traffic.
+
+Including a simple TLS parser to get SNI.
 
 ```
 +---------+   +--------------+   +--------------+   +----------+

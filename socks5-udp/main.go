@@ -42,7 +42,7 @@ func handleConnection(conn net.Conn) {
 		methodSelected = 0xff
 	}
 
-	// 发送方法选择消息
+	// send method selection response
 	_, err = conn.Write([]byte{5, methodSelected})
 	if err != nil {
 		fmt.Println("Error writing method selection message:", err)

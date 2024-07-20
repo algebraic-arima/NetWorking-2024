@@ -1,4 +1,4 @@
-# A demo for proxy1 with socks5 name-based distribution
+A proxy with routing that use system command to get pid and cmdline, and then decide which proxy to use.
 
 ```
 +---------+   +--------------+   +--------------+   +----------+

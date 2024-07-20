@@ -1,3 +1,3 @@
-module socks5-server
+module code
 
 go 1.22

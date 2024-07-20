@@ -1,3 +1,3 @@
-module socks5-2proxy
+module code
 
 go 1.22

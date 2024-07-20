@@ -1,4 +1,4 @@
-module socks5-udp
+module code
 
 go 1.22
 

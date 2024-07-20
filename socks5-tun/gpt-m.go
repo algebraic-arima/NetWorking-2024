@@ -142,7 +142,7 @@ func setup() (*water.Interface, error) {
 	}
 
 	iprouteCmds := []string{
-		"ip rule add from 10.0.0.1/24 table main",
+		"ip rule add from 10.0.0.1/24 table local",
 		"sudo ip rule add from all lookup tun0",
 		"sudo ip route add default dev tun0 table tun0",
 	}
@@ -160,7 +160,7 @@ func setup() (*water.Interface, error) {
 
 func cleanup() {
 	clearCmd := []string{
-		"sudo ip rule del from 10.0.0.1/24 table main",
+		"sudo ip rule del from 10.0.0.1/24 table local",
 		"sudo ip rule del from all table tun0",
 		"sudo ip route del default dev tun0 table tun0",
 	}
