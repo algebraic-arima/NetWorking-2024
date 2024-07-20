@@ -20,6 +20,8 @@ sudo iptables -t mangle -A OUTPUT -j PROXY_BYPASS
 ip route show table tun0
 ip rule show
 
+sudo iptables -t mangle -L -v -n
+
 echo "Hel547lnkko" | socat - UDP-DATAGRAM:192.168.1.100:12345
 sudo tcpdump -i tun0 -vv -X
 

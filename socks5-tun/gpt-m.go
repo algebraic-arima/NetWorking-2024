@@ -16,11 +16,15 @@ import (
 
 const (
 	TUN_DEVICE_NAME = "tun0"
-	MTU             = 1024
+	MTU             = 65536
 )
 
-func main() {
+var pool map[string]net.Conn
 
+func main() {
+	for k := range pool {
+		delete(pool, k)
+	}
 	ifce, err := setup()
 	if err != nil {
 		log.Println("Open tun error")
@@ -44,7 +48,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		log.Printf("Received packet from TUN device (%d bytes):\n%s\n", n, packet)
+		log.Printf("Received packet from TUN device (%d bytes):\n%s\n", n, []byte(packet))
 
 		if packet[0]&0xf0 != 0x40 {
 			log.Println("Not an IPv4 packet")
@@ -59,28 +63,19 @@ func handlePacket(ifce *water.Interface, packet []byte, length int) {
 	destinationIP := net.IPv4(packet[16], packet[17], packet[18], packet[19]).String()
 	destinationPort := binary.BigEndian.Uint16(packet[22:24])
 
-	// // Establish TCP connection to the parsed destination address and port
-	// localAddr, err := getLocalIPAddress()
-	// if err != nil {
-	// 	log.Println("Failed to get local IP address:", err)
+	dest := fmt.Sprintf("%s:%d", destinationIP, destinationPort)
+	// vConn, ok := pool[dest]
+	// if ok {
+	// 	_, err := vConn.Write(packet[:length])
+	// 	if err != nil {
+	// 		log.Println("Failed to write to server:", err)
+	// 		return
+	// 	}
+	// 	log.Println("Sent packet to server")
 	// 	return
 	// }
 
-	// localTCPAddr := &net.TCPAddr{
-	// 	IP: localAddr,
-	// }
-
-	// conn, err := net.DialTCP("tcp", localTCPAddr, &net.TCPAddr{
-	// 	IP:   net.ParseIP(destinationIP),
-	// 	Port: int(destinationPort),
-	// })
-	// if err != nil {
-	// 	log.Println("Failed to connect to server:", err)
-	// 	return
-	// }
-	// defer conn.Close()
-
-	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", destinationIP, destinationPort))
+	conn, err := net.Dial("tcp", dest)
 	if err != nil {
 		log.Printf("Failed to connect to server %s:%d: %v", destinationIP, destinationPort, err)
 		return
@@ -146,24 +141,13 @@ func setup() (*water.Interface, error) {
 		return nil, err
 	}
 
-	routeCmd := exec.Command("ip", "route", "add", "default", "dev", "tun0", "table", "tun0")
-	if err := routeCmd.Run(); err != nil {
-		log.Fatalf("Failed to add default route for tun0: %v", err)
-		return nil, err
+	iprouteCmds := []string{
+		"ip rule add from 10.0.0.1/24 table main",
+		"sudo ip rule add from all lookup tun0",
+		"sudo ip route add default dev tun0 table tun0",
 	}
 
-	iptablesCmds := []string{
-		"iptables -t mangle -N tun0",
-		"iptables -t mangle -A OUTPUT -o lo -p tcp -j MARK --set-mark 1",
-		"iptables -t mangle -A OUTPUT -p tcp --sport 8080 -j MARK --set-mark 2",
-		"ip rule add fwmark 1 table tun0",
-		"ip route add default dev tun0 table tun0",
-		"ip rule add fwmark 2 table proxy",
-		"ip route add default via 10.180.0.1 dev eth2 table proxy",
-		"iptables -t mangle -A OUTPUT -o tun0 -j ACCEPT",
-	}
-
-	for _, cmd := range iptablesCmds {
+	for _, cmd := range iprouteCmds {
 		iptablesCmd := exec.Command("bash", "-c", cmd)
 		if err := iptablesCmd.Run(); err != nil {
 			log.Printf("Failed to run iptables command '%s': %v", cmd, err)
@@ -175,17 +159,13 @@ func setup() (*water.Interface, error) {
 }
 
 func cleanup() {
-	cmds := []string{
-		"ip link set dev tun0 down",
-		"ip link del dev tun0",
-		"iptables -t mangle -D OUTPUT -p tcp --dport 80 -j MARK --set-mark 1",
-		"ip rule del fwmark 1 table tun0",
-		"iptables -t mangle -F PROXY_BYPASS",
-		"iptables -t mangle -X PROXY_BYPASS",
-		"iptables -t mangle -D OUTPUT -j PROXY_BYPASS",
+	clearCmd := []string{
+		"sudo ip rule del from 10.0.0.1/24 table main",
+		"sudo ip rule del from all table tun0",
+		"sudo ip route del default dev tun0 table tun0",
 	}
 
-	for _, cmd := range cmds {
+	for _, cmd := range clearCmd {
 		iptablesCmd := exec.Command("bash", "-c", cmd)
 		if err := iptablesCmd.Run(); err != nil {
 			log.Printf("Failed to run cleanup command '%s': %v", cmd, err)
@@ -195,40 +175,4 @@ func cleanup() {
 	log.Println("Cleaned up tun0 device and traffic rules")
 }
 
-func getLocalIPAddress() (net.IP, error) {
-	interfaces, err := net.Interfaces()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, iface := range interfaces {
-		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
-			continue
-		}
-
-		addrs, err := iface.Addrs()
-		if err != nil {
-			continue
-		}
-
-		for _, addr := range addrs {
-			var ip net.IP
-			switch v := addr.(type) {
-			case *net.IPNet:
-				ip = v.IP
-			case *net.IPAddr:
-				ip = v.IP
-			}
-
-			if ip == nil || ip.IsLoopback() {
-				continue
-			}
-
-			ip = ip.To4()
-			if ip != nil {
-				return ip, nil
-			}
-		}
-	}
-	return nil, fmt.Errorf("no IP address found")
-}
+// package main
