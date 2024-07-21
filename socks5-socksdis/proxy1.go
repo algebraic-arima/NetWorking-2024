@@ -13,14 +13,21 @@ const (
 	proxyDialPort    = 1080
 )
 
+var directDomainPattern = []string{
+	`^.*\.sjtu\.edu\.cn$`,
+}
+var forbiddenDomainPattern = []string{
+	`^.*\.baidu\.com$`,
+}
+var directCIDR = []string{
+	"192.168.1.0/24", "10.0.0.0/8",
+}
+var forbiddenCIDR = []string{
+	"39.156.66.10/1",
+}
+
 // 0 for direct, 1 for proxy, -1 for forbidden
 func diffIP(dest []byte) int {
-	directCIDR := []string{
-		"192.168.1.0/24", "10.0.0.0/8",
-	}
-	forbiddenCIDR := []string{
-		"39.156.66.10/1",
-	}
 	for _, cidr := range directCIDR {
 		_, ipNet, err := net.ParseCIDR(cidr)
 		if err != nil {
@@ -45,12 +52,7 @@ func diffIP(dest []byte) int {
 }
 
 func diffDomain(dest []byte) int {
-	directDomainPattern := []string{
-		`^.*\.sjtu\.edu\.cn$`,
-	}
-	forbiddenDomainPattern := []string{
-		`^.*\.baidu\.com$`,
-	}
+
 	for _, p := range directDomainPattern {
 		match, err := regexp.MatchString(p, string(dest))
 		if match {
