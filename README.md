@@ -37,3 +37,7 @@ and can be run independently.
 - [RFC 9112: HTTP/1.1](https://www.rfc-editor.org/rfc/rfc9112.html)
 - [HTTP on MDN](https://developer.mozilla.org/en-US/docs/Web/HTTP)
 - [RFC 8446: The Transport Layer Security (TLS) Protocol Version 1.3](https://www.rfc-editor.org/rfc/rfc8446)
+
+- DNS污染
+- SNI
+- IP封锁
